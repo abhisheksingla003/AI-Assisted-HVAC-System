@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI-Assisted HVAC System — Smart Control Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a0f0d;
+  --bg2:#111a15;
+  --bg3:#162019;
+  --bg4:#1c2a20;
+  --border:#2a3d30;
+  --border2:#3a5040;
+  --green:#22c97a;
+  --green2:#16a060;
+  --green3:#0d6e44;
+  --green-glow:rgba(34,201,122,0.15);
+  --red:#ff5c5c;
+  --red2:#cc3a3a;
+  --amber:#f0a830;
+  --blue:#4db3ff;
+  --text:#e8f2ec;
+  --text2:#8aab96;
+  --text3:#4a6655;
+  --font:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+  --display:'Syne',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;overflow-x:hidden;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* layout */
+.shell{display:grid;grid-template-rows:auto 1fr;min-height:100vh;}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.logo-mark{width:36px;height:36px;background:var(--green3);border:1px solid var(--green2);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.logo-mark svg{width:20px;height:20px;stroke:var(--green);fill:none;stroke-width:2;stroke-linecap:round;}
+.brand-name{font-family:var(--display);font-size:18px;font-weight:700;color:var(--green);letter-spacing:-0.02em;}
+.brand-sub{font-size:11px;color:var(--text3);font-family:var(--mono);}
+.header-right{display:flex;align-items:center;gap:16px;}
+.live-badge{display:flex;align-items:center;gap:6px;background:rgba(34,201,122,0.08);border:1px solid var(--green3);border-radius:20px;padding:4px 12px;}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.live-txt{font-size:11px;font-family:var(--mono);color:var(--green);}
+.dtu-tag{font-size:11px;color:var(--text3);font-family:var(--mono);border:1px solid var(--border);padding:3px 10px;border-radius:4px;}
+.time-display{font-size:12px;font-family:var(--mono);color:var(--text2);}
+
+/* mode toggle */
+.mode-toggle{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden;padding:3px;gap:3px;}
+.mode-btn{padding:6px 18px;font-size:12px;font-family:var(--font);font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text2);border-radius:5px;transition:all 0.25s;white-space:nowrap;}
+.mode-btn.active-ai{background:var(--green3);color:var(--green);border:1px solid var(--green2);}
+.mode-btn.active-trad{background:rgba(255,92,92,0.15);color:var(--red);border:1px solid rgba(255,92,92,0.4);}
+.mode-btn:hover:not(.active-ai):not(.active-trad){background:var(--bg4);color:var(--text);}
+
+/* main grid */
+.main{display:grid;grid-template-columns:340px 1fr;grid-template-rows:auto auto auto;gap:1px;background:var(--border);padding:0;}
+
+/* panels */
+.panel{background:var(--bg2);padding:1.25rem;}
+.panel-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem;font-family:var(--mono);}
+.panel-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px;}
+.panel-sub{font-size:11px;color:var(--text3);}
+
+/* sidebar: spans full height of left col */
+.sidebar{grid-column:1;grid-row:1 / 4;display:flex;flex-direction:column;gap:1px;background:var(--border);}
+.side-block{background:var(--bg2);padding:1.25rem;}
+
+/* room visual */
+.room-wrap{position:relative;margin-bottom:1rem;}
+.room-svg{width:100%;border:1px solid var(--border);border-radius:8px;background:var(--bg3);display:block;}
+
+/* sensor cards */
+.sensor-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;}
+.sensor-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.s-label{font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px;}
+.s-val{font-size:20px;font-weight:500;font-family:var(--mono);color:var(--green);line-height:1;}
+.s-unit{font-size:11px;color:var(--text3);margin-left:2px;}
+.s-bar{height:3px;background:var(--bg4);border-radius:2px;margin-top:8px;overflow:hidden;}
+.s-bar-fill{height:100%;border-radius:2px;transition:width 0.6s ease;}
+
+/* sliders */
+.ctrl-row{margin-bottom:14px;}
+.ctrl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.ctrl-name{font-size:12px;color:var(--text2);}
+.ctrl-val-disp{font-size:12px;font-family:var(--mono);color:var(--green);}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;background:var(--bg4);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--green);border-radius:50%;cursor:pointer;transition:transform 0.1s;}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+
+/* occ buttons */
+.occ-row{display:flex;gap:6px;flex-wrap:wrap;}
+.occ-btn{padding:5px 12px;font-size:11px;font-family:var(--mono);cursor:pointer;border:1px solid var(--border);border-radius:4px;background:var(--bg3);color:var(--text2);transition:all 0.2s;}
+.occ-btn:hover{border-color:var(--green3);color:var(--green);}
+.occ-btn.occ-active{background:var(--green3);color:var(--green);border-color:var(--green2);}
+
+/* setpoint */
+.setpoint-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.setpoint-row label{font-size:12px;color:var(--text2);flex:1;}
+.setpoint-row input[type=number]{width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--green);font-family:var(--mono);font-size:14px;padding:5px 8px;text-align:center;outline:none;}
+.setpoint-row input[type=number]:focus{border-color:var(--green2);}
+
+/* top right area: 3 metric cards */
+.metrics-strip{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);}
+.m-card{background:var(--bg2);padding:1.25rem 1.25rem 1rem;}
+.m-label{font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+.m-val{font-size:28px;font-weight:500;font-family:var(--mono);line-height:1;color:var(--green);}
+.m-val.warn{color:var(--amber);}
+.m-val.danger{color:var(--red);}
+.m-sub{font-size:11px;color:var(--text3);margin-top:6px;}
+.m-sub.good{color:var(--green);}
+.m-sub.bad{color:var(--red);}
+
+/* charts area */
+.charts-area{grid-column:2;grid-row:2;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.chart-panel{background:var(--bg2);padding:1.25rem;}
+
+/* energy area */
+.energy-area{grid-column:2;grid-row:3;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);}
+.energy-block{background:var(--bg2);padding:1.25rem;}
+.e-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.saving-pill{background:rgba(34,201,122,0.1);border:1px solid var(--green3);color:var(--green);font-size:11px;font-family:var(--mono);padding:3px 10px;border-radius:20px;}
+
+/* big energy bar */
+.big-bar-wrap{margin-bottom:10px;}
+.big-bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px;}
+.big-bar-bg{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;}
+.big-bar-fill{height:100%;border-radius:5px;transition:width 0.8s ease;}
+
+/* log */
+.log-area{grid-column:1 / 3;background:var(--bg2);border-top:1px solid var(--border);}
+.log-panel{padding:1rem 1.5rem;}
+.log-list{display:flex;flex-direction:column;gap:0;}
+.log-entry{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.log-entry:last-child{border-bottom:none;}
+.log-time{font-family:var(--mono);color:var(--text3);flex-shrink:0;width:58px;}
+.log-tag{padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:600;flex-shrink:0;letter-spacing:.05em;}
+.tag-ai{background:rgba(34,201,122,0.12);color:var(--green);border:1px solid var(--green3);}
+.tag-sys{background:rgba(77,179,255,0.1);color:var(--blue);border:1px solid rgba(77,179,255,0.2);}
+.tag-warn{background:rgba(240,168,48,0.1);color:var(--amber);border:1px solid rgba(240,168,48,0.2);}
+.log-msg{color:var(--text2);line-height:1.4;}
+
+/* legend */
+.legend{display:flex;gap:14px;margin-bottom:10px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);}
+.leg-sq{width:10px;height:3px;border-radius:1px;}
+
+/* AI prediction badge */
+.ai-pred-box{background:var(--bg3);border:1px solid var(--green3);border-radius:8px;padding:10px 14px;margin-bottom:12px;}
+.ai-pred-label{font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;}
+.ai-pred-txt{font-size:12px;color:var(--green);font-weight:500;}
+
+/* ai brain animation box */
+.ai-brain{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.ai-orb{width:32px;height:32px;border-radius:50%;background:var(--green3);border:1.5px solid var(--green2);display:flex;align-items:center;justify-content:center;animation:orbit 3s infinite linear;flex-shrink:0;}
+@keyframes orbit{0%{box-shadow:0 0 0 0 rgba(34,201,122,0.4);}50%{box-shadow:0 0 12px 4px rgba(34,201,122,0.15);}100%{box-shadow:0 0 0 0 rgba(34,201,122,0.4);}}
+.ai-orb svg{width:16px;height:16px;stroke:var(--green);fill:none;stroke-width:2;}
+.ai-brain-info{flex:1;}
+.ai-brain-status{font-size:12px;color:var(--text);font-weight:500;}
+.ai-brain-sub{font-size:10px;color:var(--text3);font-family:var(--mono);}
+
+/* comfort meter */
+.comfort-meter{margin-bottom:12px;}
+.comfort-track{height:12px;border-radius:6px;background:linear-gradient(to right,#4db3ff,#22c97a,#22c97a,#f0a830,#ff5c5c);position:relative;margin:8px 0;}
+.comfort-needle{position:absolute;top:-4px;width:4px;height:20px;background:var(--text);border-radius:2px;transform:translateX(-50%);transition:left 0.6s ease;}
+.comfort-labels{display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);}
+
+/* IoT nodes */
+.iot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.iot-node{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;display:flex;align-items:center;gap:8px;}
+.iot-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.iot-info{flex:1;}
+.iot-name{font-size:10px;color:var(--text2);font-family:var(--mono);}
+.iot-status{font-size:9px;color:var(--text3);}
+
+/* chart canvas wrapper */
+.canvas-wrap{position:relative;}
+
+/* footer */
+.footer{background:var(--bg2);border-top:1px solid var(--border);padding:10px 2rem;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text3);font-family:var(--mono);}
+
+/* responsive */
+@media(max-width:900px){
+  .main{grid-template-columns:1fr;}
+  .sidebar{grid-column:1;grid-row:auto;}
+  .metrics-strip,.charts-area,.energy-area{grid-column:1;}
+  .metrics-strip{grid-template-columns:1fr 1fr;}
+  .charts-area{grid-template-columns:1fr;}
+  .energy-area{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5.5 7 13 7 13s7-7.5 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">SmartHVAC.ai</div>
+      <div class="brand-sub">AI-Assisted Control System — B.Tech Major Project</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div><span class="live-txt">LIVE SIM</span></div>
+    <div class="dtu-tag">DTU · ME Dept · 2025–26</div>
+    <div class="time-display" id="clock">--:--:--</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active-ai" id="btn-ai" onclick="setMode('ai')">⬡ AI Predictive</button>
+      <button class="mode-btn" id="btn-trad" onclick="setMode('traditional')">◎ Traditional</button>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN GRID -->
+<div class="main">
+
+  <!-- ======= SIDEBAR ======= -->
+  <div class="sidebar">
+
+    <!-- AI Brain Status -->
+    <div class="side-block">
+      <div class="panel-label">System intelligence</div>
+      <div class="ai-brain" id="ai-brain-wrap">
+        <div class="ai-orb">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </div>
+        <div class="ai-brain-info">
+          <div class="ai-brain-status" id="ai-brain-status">AI Predictive Control</div>
+          <div class="ai-brain-sub" id="ai-brain-sub">LSTM v2.1 · 94.2% accuracy</div>
+        </div>
+      </div>
+      <div class="ai-pred-box" id="pred-box">
+        <div class="ai-pred-label">Next 15-min prediction</div>
+        <div class="ai-pred-txt" id="pred-txt">Temp stable → 24.3°C — pre-cooling at 40% duty</div>
+      </div>
+    </div>
+
+    <!-- Room Visual -->
+    <div class="side-block">
+      <div class="panel-label">Room 101 — live view (5m × 4m)</div>
+      <svg class="room-svg" viewBox="0 0 300 200" id="room-svg">
+        <!-- room bg -->
+        <rect x="2" y="2" width="296" height="196" rx="10" fill="#111a15" stroke="#2a3d30" stroke-width="1"/>
+        <!-- temp color bg -->
+        <rect id="room-bg-color" x="2" y="2" width="296" height="196" rx="10" fill="#22c97a" opacity="0.04"/>
+        <!-- HVAC unit on ceiling -->
+        <rect x="90" y="2" width="120" height="28" rx="6" fill="#162019" stroke="#22c97a" stroke-width="1" opacity="0.9"/>
+        <text x="150" y="20" text-anchor="middle" font-size="9" font-family="DM Mono" fill="#22c97a">■ HVAC UNIT ■</text>
+        <!-- airflow lines -->
+        <g id="airflow-lines" opacity="0.6">
+          <line x1="120" y1="30" x2="120" y2="55" stroke="#22c97a" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <line x1="150" y1="30" x2="150" y2="55" stroke="#22c97a" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <line x1="180" y1="30" x2="180" y2="55" stroke="#22c97a" stroke-width="1.5" stroke-dasharray="4,3"/>
+        </g>
+        <!-- windows -->
+        <rect x="240" y="30" width="30" height="50" rx="3" fill="none" stroke="#2a3d30" stroke-width="1"/>
+        <line x1="255" y1="30" x2="255" y2="80" stroke="#2a3d30" stroke-width="0.5"/>
+        <line x1="240" y1="55" x2="270" y2="55" stroke="#2a3d30" stroke-width="0.5"/>
+        <!-- solar indicator on window -->
+        <text id="solar-icon" x="255" y="100" text-anchor="middle" font-size="9" font-family="DM Mono" fill="#f0a830" opacity="0.7">☀ solar</text>
+        <!-- sensor nodes -->
+        <g id="sensor-temp-node" transform="translate(14,55)">
+          <rect width="58" height="44" rx="5" fill="#162019" stroke="#2a3d30" stroke-width="1"/>
+          <text x="29" y="16" text-anchor="middle" font-size="8" font-family="DM Mono" fill="#4a6655">TEMP</text>
+          <text id="svg-temp" x="29" y="34" text-anchor="middle" font-size="15" font-family="DM Mono" fill="#22c97a" font-weight="500">24.1</text>
+          <text x="50" y="34" text-anchor="middle" font-size="8" font-family="DM Mono" fill="#4a6655">°C</text>
+        </g>
+        <g id="sensor-hum-node" transform="translate(14,108)">
+          <rect width="58" height="44" rx="5" fill="#162019" stroke="#2a3d30" stroke-width="1"/>
+          <text x="29" y="16" text-anchor="middle" font-size="8" font-family="DM Mono" fill="#4a6655">HUMID</text>
+          <text id="svg-hum" x="29" y="34" text-anchor="middle" font-size="15" font-family="DM Mono" fill="#4db3ff" font-weight="500">52</text>
+          <text x="50" y="34" text-anchor="middle" font-size="8" font-family="DM Mono" fill="#4a6655">%</text>
+        </g>
+        <g transform="translate(82,55)">
+          <rect width="58" height="44" rx="5" fill="#162019" stroke="#2a3d30" stroke-width="1"/>
+          <text x="29" y="16" text-anchor="middle" font-size="8" font-family="DM Mono" fill="#4a6655">CO₂</text>
+          <text id="svg-co2" x="29" y="34" text-anchor="middle" font-size="14" font-family="DM Mono" fill="#f0a830" font-weight="500">620</text>
+          <text x="51" y="34" text-anchor="middle" font-size="7" font-family="DM Mono" fill="#4a6655">ppm</text>
+        </g>
+        <!-- occupants -->
+        <g id="occ-svg-group"></g>
+        <!-- status bar at bottom -->
+        <rect x="2" y="170" width="296" height="28" rx="0" fill="#111a15" stroke="none"/>
+        <rect id="status-bar-color" x="2" y="170" width="296" height="28" fill="#22c97a" opacity="0.08"/>
+        <text id="svg-status-txt" x="150" y="188" text-anchor="middle" font-size="9" font-family="DM Mono" fill="#22c97a">AI: Monitoring — conditions optimal</text>
+      </svg>
+    </div>
+
+    <!-- Sensors grid -->
+    <div class="side-block">
+      <div class="panel-label">Live sensor readings</div>
+      <div class="sensor-grid">
+        <div class="sensor-card">
+          <div class="s-label">TEMPERATURE</div>
+          <div><span class="s-val" id="s-temp">24.1</span><span class="s-unit">°C</span></div>
+          <div class="s-bar"><div class="s-bar-fill" id="sb-temp" style="background:#22c97a;width:48%;"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="s-label">HUMIDITY</div>
+          <div><span class="s-val" id="s-hum" style="color:#4db3ff;">52</span><span class="s-unit">%</span></div>
+          <div class="s-bar"><div class="s-bar-fill" id="sb-hum" style="background:#4db3ff;width:52%;"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="s-label">CO₂ LEVEL</div>
+          <div><span class="s-val" id="s-co2" style="color:#f0a830;">620</span><span class="s-unit">ppm</span></div>
+          <div class="s-bar"><div class="s-bar-fill" id="sb-co2" style="background:#f0a830;width:32%;"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="s-label">OCCUPANTS</div>
+          <div><span class="s-val" id="s-occ" style="color:#c084fc;">2</span><span class="s-unit">ppl</span></div>
+          <div class="s-bar"><div class="s-bar-fill" id="sb-occ" style="background:#c084fc;width:10%;"></div></div>
+        </div>
+      </div>
+
+      <!-- comfort meter -->
+      <div class="comfort-meter">
+        <div class="panel-label" style="margin-bottom:4px;">PMV comfort index</div>
+        <div class="comfort-track">
+          <div class="comfort-needle" id="comfort-needle" style="left:50%;"></div>
+        </div>
+        <div class="comfort-labels">
+          <span>−3 cold</span><span>−1</span><span>0 neutral</span><span>+1</span><span>+3 hot</span>
+        </div>
+        <div style="text-align:center;font-size:11px;font-family:DM Mono;color:var(--green);margin-top:4px;" id="pmv-txt">PMV: 0.12 — Neutral ✓</div>
+      </div>
+
+      <!-- IoT nodes -->
+      <div class="panel-label">IoT node status</div>
+      <div class="iot-grid">
+        <div class="iot-node"><div class="iot-dot" style="background:#22c97a;animation:blink 1.4s infinite;"></div><div class="iot-info"><div class="iot-name">Temp sensor</div><div class="iot-status">DHT22 · active</div></div></div>
+        <div class="iot-node"><div class="iot-dot" style="background:#22c97a;animation:blink 1.8s infinite;"></div><div class="iot-info"><div class="iot-name">CO₂ sensor</div><div class="iot-status">MH-Z19B · active</div></div></div>
+        <div class="iot-node"><div class="iot-dot" style="background:#4db3ff;animation:blink 2.2s infinite;"></div><div class="iot-info"><div class="iot-name">PIR sensor</div><div class="iot-status">HC-SR501 · active</div></div></div>
+        <div class="iot-node"><div class="iot-dot" style="background:#22c97a;animation:blink 2.6s infinite;"></div><div class="iot-info"><div class="iot-name">AI controller</div><div class="iot-status" id="iot-ai-status">Raspberry Pi · ML</div></div></div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="side-block">
+      <div class="panel-label">Environment controls</div>
+      <div class="ctrl-row">
+        <div class="ctrl-head">
+          <span class="ctrl-name">Outdoor temperature</span>
+          <span class="ctrl-val-disp" id="lbl-out">38°C</span>
+        </div>
+        <input type="range" min="20" max="48" value="38" step="1" id="sl-out" oninput="handleCtrl()"/>
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-head">
+          <span class="ctrl-name">Solar radiation</span>
+          <span class="ctrl-val-disp" id="lbl-solar">High (700 W/m²)</span>
+        </div>
+        <input type="range" min="0" max="1000" value="700" step="10" id="sl-solar" oninput="handleCtrl()"/>
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-head">
+          <span class="ctrl-name">Occupants in room</span>
+          <span class="ctrl-val-disp" id="lbl-occ">2 people</span>
+        </div>
+        <div class="occ-row">
+          <button class="occ-btn" onclick="setOcc(0)">0</button>
+          <button class="occ-btn occ-active" onclick="setOcc(2)">2</button>
+          <button class="occ-btn" onclick="setOcc(5)">5</button>
+          <button class="occ-btn" onclick="setOcc(10)">10</button>
+          <button class="occ-btn" onclick="setOcc(20)">20</button>
+        </div>
+      </div>
+      <div class="setpoint-row">
+        <label>Target setpoint (°C)</label>
+        <input type="number" id="inp-setpoint" value="24" min="18" max="30" oninput="handleCtrl()"/>
+      </div>
+    </div>
+
+  </div><!-- end sidebar -->
+
+  <!-- ======= RIGHT: METRICS STRIP ======= -->
+  <div class="metrics-strip">
+    <div class="m-card">
+      <div class="m-label">Indoor temp</div>
+      <div class="m-val" id="m-temp">24.1°C</div>
+      <div class="m-sub" id="m-temp-sub">Setpoint: 24°C · deviation 0.1°</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Compressor cycles / hr</div>
+      <div class="m-val" id="m-cycles">3</div>
+      <div class="m-sub" id="m-cyc-sub" class="good">AI optimised · reduced wear</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Current power draw</div>
+      <div class="m-val" id="m-power">1.8 kW</div>
+      <div class="m-sub" id="m-pow-sub">Duty cycle: 60%</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Energy saved today</div>
+      <div class="m-val good" id="m-saved">1.46 kWh</div>
+      <div class="m-sub good" id="m-sav-sub">vs traditional thermostat</div>
+    </div>
+  </div>
+
+  <!-- ======= CHARTS ======= -->
+  <div class="charts-area">
+    <div class="chart-panel">
+      <div class="panel-title">Temperature trend — 30-minute window</div>
+      <div class="panel-sub" style="margin-bottom:10px;">AI prediction vs actual vs traditional thermostat</div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#22c97a;height:2px;border-top:2px dashed #22c97a;background:none;width:16px;"></div> AI prediction</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#4db3ff;"></div> Actual (AI mode)</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#ff5c5c;"></div> Traditional</div>
+      </div>
+      <div class="canvas-wrap" style="height:210px;">
+        <canvas id="chartTemp" role="img" aria-label="Temperature trend chart: AI prediction, AI actual, and traditional thermostat over 30 minutes.">Temperature over 30 min</canvas>
+      </div>
+    </div>
+
+    <div class="chart-panel">
+      <div class="panel-title">Indoor air quality — CO₂ & humidity</div>
+      <div class="panel-sub" style="margin-bottom:10px;">AI dynamic ventilation vs traditional fixed schedule</div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#22c97a;"></div> CO₂ AI-controlled</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#ff5c5c;"></div> CO₂ traditional</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#4db3ff;"></div> Humidity</div>
+      </div>
+      <div class="canvas-wrap" style="height:210px;">
+        <canvas id="chartIAQ" role="img" aria-label="CO2 and humidity chart comparing AI-controlled and traditional ventilation.">CO2 and humidity levels</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= ENERGY ======= -->
+  <div class="energy-area">
+    <div class="energy-block">
+      <div class="e-header">
+        <div>
+          <div class="panel-title">AI-Assisted HVAC</div>
+          <div class="panel-sub">8-hour operation</div>
+        </div>
+        <div class="saving-pill" id="saving-pill">−18.4% energy</div>
+      </div>
+      <div class="big-bar-wrap">
+        <div class="big-bar-label"><span>Energy consumed</span><span id="e-ai-kwh" style="color:#22c97a;">6.5 kWh</span></div>
+        <div class="big-bar-bg"><div class="big-bar-fill" id="bar-ai" style="width:65%;background:#22c97a;"></div></div>
+      </div>
+      <div class="big-bar-wrap">
+        <div class="big-bar-label"><span>Compressor runtime</span><span style="color:#22c97a;" id="e-ai-runtime">5.2 hrs</span></div>
+        <div class="big-bar-bg"><div class="big-bar-fill" id="bar-ai-rt" style="width:65%;background:#22c97a;opacity:0.5;"></div></div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="canvas-wrap" style="height:90px;">
+          <canvas id="chartEnergy" role="img" aria-label="Hourly energy consumption comparison bar chart.">Hourly energy consumption</canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="energy-block">
+      <div class="e-header">
+        <div>
+          <div class="panel-title">Traditional Thermostat</div>
+          <div class="panel-sub">8-hour operation</div>
+        </div>
+      </div>
+      <div class="big-bar-wrap">
+        <div class="big-bar-label"><span>Energy consumed</span><span id="e-trad-kwh" style="color:#ff5c5c;">7.96 kWh</span></div>
+        <div class="big-bar-bg"><div class="big-bar-fill" id="bar-trad" style="width:80%;background:#ff5c5c;"></div></div>
+      </div>
+      <div class="big-bar-wrap">
+        <div class="big-bar-label"><span>Compressor runtime</span><span style="color:#ff5c5c;" id="e-trad-runtime">7.1 hrs</span></div>
+        <div class="big-bar-bg"><div class="big-bar-fill" id="bar-trad-rt" style="width:89%;background:#ff5c5c;opacity:0.5;"></div></div>
+      </div>
+      <div style="margin-top:14px;font-size:11px;color:var(--text3);font-family:var(--mono);line-height:1.8;">
+        <div>Compressor cycles: <span style="color:#ff5c5c;" id="e-trad-cyc">9 / hr</span></div>
+        <div>Temp deviation: <span style="color:#ff5c5c;" id="e-trad-dev">±1.8°C</span></div>
+        <div>Humidity control: <span style="color:#ff5c5c;">None</span></div>
+      </div>
+    </div>
+
+    <div class="energy-block">
+      <div class="panel-title">Cost & ROI Analysis</div>
+      <div class="panel-sub" style="margin-bottom:14px;">Annual projection · ₹7/kWh commercial rate</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--text3);">Annual AI energy cost</span>
+          <span style="font-family:var(--mono);color:#22c97a;" id="roi-ai">₹16,606</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--text3);">Annual traditional cost</span>
+          <span style="font-family:var(--mono);color:#ff5c5c;" id="roi-trad">₹20,337</span>
+        </div>
+        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--text2);font-weight:500;">Annual savings</span>
+          <span style="font-family:var(--mono);color:#22c97a;font-weight:500;" id="roi-save">₹3,731</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--text3);">Payback period</span>
+          <span style="font-family:var(--mono);color:#f0a830;" id="roi-payback">~8 months</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--text3);">CO₂ emissions saved</span>
+          <span style="font-family:var(--mono);color:#22c97a;" id="roi-co2">547 kg/yr</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--text3);">Comfort improvement</span>
+          <span style="font-family:var(--mono);color:#22c97a;">+73% PMV stability</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main grid -->
+
+<!-- AI Decision Log -->
+<div style="background:var(--bg2);border-top:1px solid var(--border);padding:1rem 1.5rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div class="panel-label" style="margin-bottom:0;">AI decision log</div>
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);" id="log-count">0 events</div>
+  </div>
+  <div class="log-list" id="log-list" style="max-height:120px;overflow-y:auto;"></div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <span>SmartHVAC.ai · AI-Assisted HVAC System · B.Tech Major Project · Delhi Technological University · Dept. of Mechanical Engineering · 2025–26</span>
+  <span>Aakash Kumar (2K22/ME/02) · Abhinav Rewalia (2K22/ME/08) · Abhishek Singla (2K22/ME/11) · Supervisor: Prof. Subhashish Maji</span>
+</footer>
+
+</div><!-- end shell -->
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let mode = 'ai';
+let occ = 2;
+let tick = 0;
+let logs = [];
+let chartTemp, chartIAQ, chartEnergy;
+const MAX_LOGS = 40;
+
+const AI_MSGS = [
+  'Occupancy rise detected — pre-cooling initiated 10 min early',
+  'CO₂ trend: +14 ppm/min — ventilation damper opened 30%',
+  'Solar gain peak predicted at 14:30 — load forecast updated',
+  'Compressor duty cycle reduced to 55% — temperature stable',
+  'LSTM model confidence: 96.1% — forecast horizon 18 min',
+  'Outdoor temp drop predicted — reducing cooling load proactively',
+  'Humidity within range — dehumidifier bypassed, saving 0.3 kWh',
+  'Peak load window 15:00–16:30 — pre-cool cycle scheduled',
+  'Fan modulated: 1200 → 900 RPM — comfort index maintained',
+  'Occupancy pattern learned — ETA 09:00 start time predicted',
+  'Thermal mass model updated — wall temperature factored in',
+  'CO₂ below threshold — fresh-air intake reduced to save energy',
+];
+const TRAD_MSGS = [
+  'Thermostat: 25°C exceeded — compressor switched ON',
+  'Thermostat: below 23°C — compressor switched OFF',
+  'Short-cycle event: ON→OFF in 3 min (compressor stress)',
+  'High humidity undetected — no ventilation adjustment made',
+  'CO₂ at 1080 ppm — no response (no IAQ sensor)',
+  'Thermostat cycling: 11 ON/OFF events this hour',
+  'Temperature overshoot: 26.4°C before compressor engaged',
+];
+
+// ─── CLOCK ───────────────────────────────────────────────
+function updateClock(){
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    String(n.getHours()).padStart(2,'0')+':'+
+    String(n.getMinutes()).padStart(2,'0')+':'+
+    String(n.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── HELPERS ─────────────────────────────────────────────
+function getParams(){
+  return {
+    out: +document.getElementById('sl-out').value,
+    solar: +document.getElementById('sl-solar').value,
+    sp: +document.getElementById('inp-setpoint').value || 24,
+    occ
+  };
+}
+
+function computeAITemp(t, p){
+  const load = (p.out - p.sp)*0.07 + p.solar*0.002 + p.occ*0.14;
+  const n = (Math.random()-0.5)*0.15;
+  return p.sp + Math.max(0, load*0.5)*Math.sin(t*0.28)*0.55 + n;
+}
+function computeTradTemp(t, p){
+  const load = (p.out - p.sp)*0.09 + p.solar*0.003 + p.occ*0.22;
+  const n = (Math.random()-0.5)*0.4;
+  return p.sp + load*0.85*Math.sin(t*0.48+1)*1.5 + n;
+}
+function computePMV(temp, hum, occ){
+  return Math.max(-3, Math.min(3, (temp-22)*0.12 + (hum-50)/50*0.3 + occ*0.04 - 0.05));
+}
+function computeCO2(t, occ, isAI){
+  const base = 415 + occ*55;
+  const rise = t*1.1;
+  const control = isAI ? Math.max(0, (base+rise-700)*0.5) : 0;
+  return Math.round(base + rise - control + (Math.random()-0.5)*8);
+}
+function computeEnergy(p){
+  const base = 5;
+  const load = (p.out-p.sp)*0.06 + p.solar*0.0015 + p.occ*0.07;
+  const aiKwh = +(base + load*0.72).toFixed(2);
+  const tradKwh = +(base + load).toFixed(2);
+  const saving = +(((tradKwh-aiKwh)/tradKwh)*100).toFixed(1);
+  const annSaveRs = Math.round((tradKwh-aiKwh)*365*7);
+  const tradAnnRs = Math.round(tradKwh*365*7);
+  const aiAnnRs = Math.round(aiKwh*365*7);
+  return {aiKwh, tradKwh, saving, annSaveRs, tradAnnRs, aiAnnRs};
+}
+
+// ─── LOG ─────────────────────────────────────────────────
+function addLog(tag, msg){
+  const n = new Date();
+  const t = String(n.getHours()).padStart(2,'0')+':'+
+            String(n.getMinutes()).padStart(2,'0')+':'+
+            String(n.getSeconds()).padStart(2,'0');
+  logs.unshift({tag, msg, t});
+  if(logs.length > MAX_LOGS) logs.pop();
+  renderLogs();
+}
+function renderLogs(){
+  document.getElementById('log-list').innerHTML = logs.slice(0,12).map(l=>
+    `<div class="log-entry">
+      <span class="log-time">${l.t}</span>
+      <span class="log-tag tag-${l.tag}">${l.tag==='ai'?'AI':l.tag==='warn'?'WARN':'SYS'}</span>
+      <span class="log-msg">${l.msg}</span>
+    </div>`
+  ).join('');
+  document.getElementById('log-count').textContent = logs.length+' events';
+}
+
+// ─── OCCUPANT SVG ─────────────────────────────────────────
+function renderOccSVG(){
+  const g = document.getElementById('occ-svg-group');
+  g.innerHTML='';
+  const n = Math.min(occ, 7);
+  for(let i=0;i<n;i++){
+    const x = 155 + i*18, y = 148;
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r','7');
+    c.setAttribute('fill','#162019'); c.setAttribute('stroke','#22c97a'); c.setAttribute('stroke-width','1');
+    g.appendChild(c);
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',x); t.setAttribute('y',y+4);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','8');
+    t.setAttribute('font-family','DM Mono'); t.setAttribute('fill','#22c97a');
+    t.textContent='P';
+    g.appendChild(t);
+  }
+  if(occ>7){
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x','278'); t.setAttribute('y','152');
+    t.setAttribute('font-size','8'); t.setAttribute('font-family','DM Mono');
+    t.setAttribute('fill','#4a6655'); t.textContent='+' +(occ-7);
+    g.appendChild(t);
+  }
+}
+
+// ─── METRICS UPDATE ──────────────────────────────────────
+function updateMetrics(){
+  const p = getParams();
+  const aiT = computeAITemp(tick, p);
+  const tradT = computeTradTemp(tick, p);
+  const curT = mode==='ai' ? aiT : tradT;
+  const hum = Math.round(48 + occ*1.3 + (Math.random()-0.5)*2);
+  const co2 = computeCO2(tick, occ, mode==='ai');
+  const cycles = mode==='ai' ? Math.max(1, 3-Math.floor(occ/6)) : 8+Math.floor(occ/3);
+  const power = mode==='ai' ? +(1.2 + (curT-p.sp)*0.3 + occ*0.04).toFixed(2) : +(2.1 + (curT-p.sp)*0.3 + occ*0.06).toFixed(2);
+  const pmv = computePMV(curT, hum, occ);
+  const e = computeEnergy(p);
+
+  // sensors
+  document.getElementById('s-temp').textContent = curT.toFixed(1);
+  document.getElementById('s-hum').textContent = hum;
+  document.getElementById('s-co2').textContent = co2;
+  document.getElementById('s-occ').textContent = occ;
+  const tPct = Math.round(((curT-15)/(40-15))*100);
+  document.getElementById('sb-temp').style.width = tPct+'%';
+  document.getElementById('sb-temp').style.background = curT<22?'#4db3ff':curT<26?'#22c97a':curT<29?'#f0a830':'#ff5c5c';
+  document.getElementById('sb-hum').style.width = hum+'%';
+  document.getElementById('sb-co2').style.width = Math.min(100,Math.round(co2/20))+'%';
+  document.getElementById('sb-co2').style.background = co2<700?'#22c97a':co2<1000?'#f0a830':'#ff5c5c';
+  document.getElementById('sb-occ').style.width = Math.min(100,occ*5)+'%';
+
+  // comfort needle
+  const needlePct = Math.round(((pmv+3)/6)*100);
+  document.getElementById('comfort-needle').style.left = needlePct+'%';
+  const pmvLabel = pmv<-1?'Cool':pmv<-0.5?'Slightly cool':pmv>1?'Warm':pmv>0.5?'Slightly warm':'Neutral ✓';
+  document.getElementById('pmv-txt').textContent = 'PMV: '+pmv.toFixed(2)+' — '+pmvLabel;
+  document.getElementById('pmv-txt').style.color = Math.abs(pmv)<0.5?'#22c97a':Math.abs(pmv)<1?'#f0a830':'#ff5c5c';
+
+  // metrics strip
+  const mTemp = document.getElementById('m-temp');
+  mTemp.textContent = curT.toFixed(1)+'°C';
+  mTemp.className = 'm-val'+(Math.abs(curT-p.sp)>1?' warn':Math.abs(curT-p.sp)>2?' danger':'');
+  document.getElementById('m-temp-sub').textContent = 'Setpoint: '+p.sp+'°C · deviation '+Math.abs(curT-p.sp).toFixed(1)+'°';
+  document.getElementById('m-cycles').textContent = cycles;
+  document.getElementById('m-cycles').className = 'm-val'+(mode==='trad'?' warn':'');
+  document.getElementById('m-cyc-sub').textContent = mode==='ai'?'AI optimised · reduced wear':'High cycling · compressor stress';
+  document.getElementById('m-cyc-sub').className = 'm-sub'+(mode==='ai'?' good':' bad');
+  document.getElementById('m-power').textContent = Math.max(0.5, power).toFixed(1)+' kW';
+  document.getElementById('m-pow-sub').textContent = 'Duty cycle: '+Math.round(Math.min(100, power/3*100))+'%';
+  document.getElementById('m-saved').textContent = (e.tradKwh-e.aiKwh).toFixed(2)+' kWh';
+  document.getElementById('m-sav-sub').textContent = 'vs traditional · '+e.saving+'% reduction';
+
+  // SVG room
+  document.getElementById('svg-temp').textContent = curT.toFixed(1);
+  document.getElementById('svg-hum').textContent = hum;
+  document.getElementById('svg-co2').textContent = co2;
+  const bgCol = curT<22?'rgba(77,179,255,0.08)':curT<25?'rgba(34,201,122,0.06)':curT<27?'rgba(240,168,48,0.08)':'rgba(255,92,92,0.08)';
+  document.getElementById('room-bg-color').setAttribute('fill', curT<22?'#4db3ff':curT<25?'#22c97a':curT<27?'#f0a830':'#ff5c5c');
+  document.getElementById('room-bg-color').setAttribute('opacity', '0.05');
+  const stColor = mode==='ai'?'#22c97a':'#f0a830';
+  document.getElementById('status-bar-color').setAttribute('fill', stColor);
+  const diff12 = computeAITemp(tick+2, p) - curT;
+  const action = mode==='ai'
+    ? (diff12>0.2 ? 'Pre-cooling ON — temp rise predicted in '+(8+occ)+' min' : diff12<-0.2 ? 'Duty reduced — forecast stable' : 'Monitoring — conditions optimal')
+    : 'Thermostat reactive control — '+cycles+' cycles/hr';
+  document.getElementById('svg-status-txt').textContent = (mode==='ai'?'AI: ':'TRAD: ')+action;
+  document.getElementById('svg-status-txt').setAttribute('fill', stColor);
+
+  // AI brain
+  const bStatus = mode==='ai'?'AI Predictive Control ACTIVE':'Traditional Thermostat Mode';
+  const bSub = mode==='ai'?'LSTM v2.1 · conf. '+(92+Math.round(Math.random()*4))+'%':'Simple ON/OFF logic · no prediction';
+  document.getElementById('ai-brain-status').textContent = bStatus;
+  document.getElementById('ai-brain-sub').textContent = bSub;
+  document.getElementById('ai-brain-sub').style.color = mode==='ai'?'#4a6655':'#ff5c5c';
+  const predDiff = computeAITemp(tick+5, p);
+  document.getElementById('pred-txt').textContent = mode==='ai'
+    ? ('Temp → '+predDiff.toFixed(1)+'°C — '+(predDiff>p.sp+0.5?'pre-cooling cycle':'stable — eco mode'))
+    : 'No prediction available in traditional mode';
+  document.getElementById('pred-box').style.borderColor = mode==='ai'?'var(--green3)':'rgba(255,92,92,0.3)';
+
+  // energy
+  const aiPct = Math.round((e.aiKwh/10)*100);
+  const tradPct = Math.round((e.tradKwh/10)*100);
+  document.getElementById('e-ai-kwh').textContent = e.aiKwh+' kWh';
+  document.getElementById('e-trad-kwh').textContent = e.tradKwh+' kWh';
+  document.getElementById('bar-ai').style.width = aiPct+'%';
+  document.getElementById('bar-trad').style.width = tradPct+'%';
+  document.getElementById('bar-ai-rt').style.width = Math.round(aiPct*0.8)+'%';
+  document.getElementById('bar-trad-rt').style.width = Math.round(tradPct*0.92)+'%';
+  document.getElementById('e-ai-runtime').textContent = (e.aiKwh*0.8).toFixed(1)+' hrs';
+  document.getElementById('e-trad-runtime').textContent = (e.tradKwh*0.9).toFixed(1)+' hrs';
+  document.getElementById('e-trad-cyc').textContent = cycles+' / hr';
+  document.getElementById('e-trad-dev').textContent = '±'+(mode==='ai'?'0.6':'1.8')+'°C';
+  document.getElementById('saving-pill').textContent = '−'+e.saving+'% energy';
+  document.getElementById('roi-ai').textContent = '₹'+e.aiAnnRs.toLocaleString('en-IN');
+  document.getElementById('roi-trad').textContent = '₹'+e.tradAnnRs.toLocaleString('en-IN');
+  document.getElementById('roi-save').textContent = '₹'+e.annSaveRs.toLocaleString('en-IN');
+  const payback = Math.round(30000/e.annSaveRs*12);
+  document.getElementById('roi-payback').textContent = '~'+payback+' months';
+  const co2saved = Math.round((e.tradKwh-e.aiKwh)*365*0.82);
+  document.getElementById('roi-co2').textContent = co2saved+' kg/yr';
+
+  renderOccSVG();
+}
+
+// ─── CHARTS ──────────────────────────────────────────────
+function buildTimeLabels(){
+  const labels = [];
+  const now = new Date();
+  for(let i=-15;i<=15;i++){
+    const d = new Date(now.getTime()+i*60000);
+    labels.push(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'));
+  }
+  return labels;
+}
+
+function buildTempData(p){
+  const ai=[], trad=[], pred=[];
+  for(let i=0;i<31;i++){
+    const t = i - 15 + tick*0.3;
+    const a = computeAITemp(t, p);
+    const tr = computeTradTemp(t, p);
+    ai.push(i<=15 ? +a.toFixed(2) : null);
+    trad.push(+tr.toFixed(2));
+    pred.push(+(a + (i>15?(Math.random()-0.3)*0.3:0)).toFixed(2));
+  }
+  return {ai, trad, pred};
+}
+
+function buildIAQData(p){
+  const co2ai=[], co2trad=[], hum=[];
+  for(let i=0;i<31;i++){
+    const t = i + tick*0.3;
+    co2ai.push(Math.round(415+occ*55+t*1.0 - Math.max(0,(415+occ*55+t*1.0-700)*0.5)));
+    co2trad.push(Math.round(415+occ*55+t*1.4));
+    hum.push(+(48+occ*1.3+(Math.random()-0.5)*1.5).toFixed(1));
+  }
+  return {co2ai, co2trad, hum};
+}
+
+function buildEnergyHourly(p){
+  const aiH=[], tradH=[];
+  for(let h=0;h<8;h++){
+    const load = (p.out-p.sp)*0.06 + p.solar*0.0015 + occ*0.07;
+    const variation = 0.8 + Math.random()*0.4;
+    aiH.push(+((0.6 + load*0.72/8)*variation).toFixed(2));
+    tradH.push(+((0.6 + load/8)*variation*1.22).toFixed(2));
+  }
+  return {aiH, tradH};
+}
+
+function initCharts(){
+  const p = getParams();
+  const labels = buildTimeLabels();
+  const {ai, trad, pred} = buildTempData(p);
+  const {co2ai, co2trad, hum} = buildIAQData(p);
+  const {aiH, tradH} = buildEnergyHourly(p);
+  const hrLabels = ['8h','9h','10h','11h','12h','13h','14h','15h'];
+  const co = {responsive:true, maintainAspectRatio:false, animation:{duration:300}};
+
+  chartTemp = new Chart(document.getElementById('chartTemp'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Prediction',data:pred,borderColor:'#22c97a',borderWidth:1.5,borderDash:[5,4],tension:0.4,pointRadius:0,fill:false},
+      {label:'AI Actual',data:ai,borderColor:'#4db3ff',borderWidth:2,tension:0.4,pointRadius:0,fill:false},
+      {label:'Traditional',data:trad,borderColor:'#ff5c5c',borderWidth:1.5,tension:0.4,pointRadius:0,borderDash:[3,3],fill:false},
+    ]},
+    options:{...co,plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#4a6655',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{min:18,max:32,ticks:{color:'#4a6655',font:{size:10},callback:v=>v+'°'},grid:{color:'rgba(255,255,255,0.04)'}},
+      }
+    }
+  });
+
+  chartIAQ = new Chart(document.getElementById('chartIAQ'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'CO₂ AI',data:co2ai,borderColor:'#22c97a',borderWidth:2,tension:0.4,pointRadius:0,fill:false,yAxisID:'y'},
+      {label:'CO₂ Trad',data:co2trad,borderColor:'#ff5c5c',borderWidth:1.5,tension:0.4,pointRadius:0,borderDash:[3,3],fill:false,yAxisID:'y'},
+      {label:'Humidity',data:hum,borderColor:'#4db3ff',borderWidth:1.5,tension:0.4,pointRadius:0,fill:false,yAxisID:'y2'},
+    ]},
+    options:{...co,plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#4a6655',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#4a6655',font:{size:10},callback:v=>v+' ppm'},grid:{color:'rgba(255,255,255,0.04)'},title:{display:true,text:'CO₂ (ppm)',color:'#4a6655',font:{size:10}}},
+        y2:{position:'right',ticks:{color:'#4a6655',font:{size:10},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'Humidity (%)',color:'#4a6655',font:{size:10}}},
+      }
+    }
+  });
+
+  chartEnergy = new Chart(document.getElementById('chartEnergy'),{
+    type:'bar',
+    data:{labels:hrLabels,datasets:[
+      {label:'AI',data:aiH,backgroundColor:'rgba(34,201,122,0.5)',borderColor:'#22c97a',borderWidth:1,borderRadius:3},
+      {label:'Traditional',data:tradH,backgroundColor:'rgba(255,92,92,0.4)',borderColor:'#ff5c5c',borderWidth:1,borderRadius:3},
+    ]},
+    options:{...co,plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#4a6655',font:{size:9}},grid:{display:false}},
+        y:{ticks:{color:'#4a6655',font:{size:9},callback:v=>v+' kW'},grid:{color:'rgba(255,255,255,0.04)'}},
+      }
+    }
+  });
+}
+
+function refreshCharts(){
+  if(!chartTemp) return;
+  const p = getParams();
+  const {ai, trad, pred} = buildTempData(p);
+  const {co2ai, co2trad, hum} = buildIAQData(p);
+  const {aiH, tradH} = buildEnergyHourly(p);
+  chartTemp.data.datasets[0].data = pred;
+  chartTemp.data.datasets[1].data = ai;
+  chartTemp.data.datasets[2].data = trad;
+  chartTemp.update('none');
+  chartIAQ.data.datasets[0].data = co2ai;
+  chartIAQ.data.datasets[1].data = co2trad;
+  chartIAQ.data.datasets[2].data = hum;
+  chartIAQ.update('none');
+  chartEnergy.data.datasets[0].data = aiH;
+  chartEnergy.data.datasets[1].data = tradH;
+  chartEnergy.update('none');
+}
+
+// ─── CONTROLS ────────────────────────────────────────────
+function handleCtrl(){
+  const out = document.getElementById('sl-out').value;
+  const solar = document.getElementById('sl-solar').value;
+  const solarLbl = solar<200?'Low':solar<500?'Moderate':solar<800?'High':'Very high';
+  document.getElementById('lbl-out').textContent = out+'°C';
+  document.getElementById('lbl-solar').textContent = solarLbl+' ('+solar+' W/m²)';
+  if(mode==='ai') addLog('ai','Environment changed — prediction model recalibrating');
+  else addLog('warn','Outdoor conditions changed — thermostat unaware, no adaptation');
+  updateMetrics();
+  refreshCharts();
+}
+
+function setOcc(n){
+  occ = n;
+  document.querySelectorAll('.occ-btn').forEach(b=>b.classList.remove('occ-active'));
+  event.target.classList.add('occ-active');
+  document.getElementById('lbl-occ').textContent = n+' people';
+  const msg = mode==='ai'
+    ? `Occupancy → ${n} ppl — load forecast updated, pre-cooling ${n>5?'activated':'reduced'}`
+    : `Occupancy → ${n} ppl — thermostat has no occupancy awareness`;
+  addLog(mode==='ai'?'ai':'warn', msg);
+  updateMetrics();
+  refreshCharts();
+}
+
+function setMode(m){
+  mode = m;
+  document.getElementById('btn-ai').className = 'mode-btn'+(m==='ai'?' active-ai':'');
+  document.getElementById('btn-trad').className = 'mode-btn'+(m==='traditional'?' active-trad':'');
+  document.getElementById('iot-ai-status').textContent = m==='ai'?'Raspberry Pi · ML':'Bypass · OFF';
+  addLog('sys', m==='ai'
+    ? 'Switched to AI Predictive Control — LSTM model active'
+    : 'Switched to Traditional Thermostat — AI disabled');
+  updateMetrics();
+  refreshCharts();
+}
+
+// ─── SIMULATION LOOP ─────────────────────────────────────
+function simLoop(){
+  tick++;
+  updateMetrics();
+  if(tick%4===0) refreshCharts();
+  if(tick%8===0){
+    const pool = mode==='ai'?AI_MSGS:TRAD_MSGS;
+    addLog(mode==='ai'?'ai':'warn', pool[Math.floor(Math.random()*pool.length)]);
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    initCharts();
+    updateMetrics();
+    addLog('sys','SmartHVAC.ai dashboard initialised');
+    addLog('sys','IoT sensor network — 4 nodes connected');
+    addLog('ai','LSTM model loaded — training data: 14-day dataset, 8,640 samples');
+    addLog('ai','Initial scan: conditions stable — monitoring mode active');
+    setInterval(simLoop, 2000);
+  }, 200);
+});
+</script>
+</body>
+</html>
